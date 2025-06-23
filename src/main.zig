@@ -27,12 +27,12 @@ const interop = @import("interop.zig");
 // const Ini = ini.Ini;
 // const DisplayServer = enums.DisplayServer;
 // const Entry = Environment.Entry;
-// const termbox = interop.termbox;
+const termbox = interop.termbox;
 // const unistd = interop.unistd;
 // const temporary_allocator = std.heap.page_allocator;
 // const ly_top_str = "Ly version " ++ build_options.version;
 
-const termbox = @import("termbox2");  // Add this import
+// const termbox = @import("termbox2");  // Add this import
 
 fn get_buffer(config : Config) TerminalBuffer {
     const buffer_options = TerminalBuffer.InitOptions{
@@ -56,7 +56,7 @@ fn get_buffer(config : Config) TerminalBuffer {
 
 pub fn main() !void {
     const config = Config{
-        .animation = enums.Animation.doom,
+        .animation = enums.Animation.matrix,
     };
 
     _ = termbox.tb_init();
@@ -64,7 +64,16 @@ pub fn main() !void {
 
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     defer _ = gpa.deinit();
+
     var buffer = get_buffer(config);
+    buffer.width = @intCast(termbox.tb_width());
+    buffer.height = @intCast(termbox.tb_height());
+
+    // Make sure buffer has valid dimensions 
+    if (buffer.width == 0 or buffer.height == 0) {
+        std.debug.print("Invalid terminal dimensions!\n", .{});
+        return;
+    }
 
     // var info_line = InfoLine.init(allocator, &buffer);
     // var session = Session.init(allocator, &buffer);
@@ -89,20 +98,24 @@ pub fn main() !void {
             var color_mix = ColorMix.init(&buffer, config.colormix_col1, config.colormix_col2, config.colormix_col3);
             animation = color_mix.animation();
         },
+        .picture => {
+            var dummy = Dummy{};
+            animation = dummy.animation();
+        },
     }
 
     defer animation.deinit();
 
     // draw animation
     while(true) {
-        //resize buffer
-        const width: usize = @intCast(termbox.tb_width());
-        const height: usize = @intCast(termbox.tb_height());
-
-        if (width != buffer.width or height != buffer.height) {
-            buffer.width = width;
-            buffer.height = height;
-        }
+        // //resize buffer
+        // const width: usize = @intCast(termbox.tb_width());
+        // const height: usize = @intCast(termbox.tb_height());
+        //
+        // if (width != buffer.width or height != buffer.height) {
+        //     buffer.width = width;
+        //     buffer.height = height;
+        // }
 
         _ = termbox.tb_clear();
         animation.draw();
